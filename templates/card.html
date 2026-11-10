@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ card.name }} | Oser Business Card</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Subtle ambient radial glow behind the card */
+        .ambient-glow {
+            position: absolute;
+            width: 65vw;
+            height: 65vw;
+            max-width: 750px;
+            max-height: 750px;
+            background: radial-gradient(circle, rgba(28, 55, 125, 0.22) 0%, rgba(212, 160, 36, 0.06) 45%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 3D Scene Container */
+        .scene {
+            width: min(86vw, 680px);
+            aspect-ratio: 1059 / 600;
+            perspective: 1400px;
+            z-index: 1;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .scene:active {
+            cursor: grabbing;
+        }
+
+        /* 3D Card Object */
+        .card-3d {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            border-radius: 18px;
+            box-shadow:
+                0 30px 60px rgba(0, 0, 0, 0.9),
+                0 0 40px rgba(30, 64, 175, 0.25);
+            transition: box-shadow 0.3s ease;
+        }
+
+        /* Front and Back Faces */
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 18px;
+            overflow: hidden;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: #060b26;
+        }
+
+        .card-front {
+            transform: translateZ(2px);
+        }
+
+        .card-back {
+            transform: rotateY(180deg) translateZ(2px);
+        }
+
+        /* Thickness layers in between to make the 3D edge feel solid */
+        .card-edge-layer {
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            border: 1px solid rgba(212, 160, 36, 0.35);
+            background: #0a1029;
+            pointer-events: none;
+        }
+
+        .card-face img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            pointer-events: none;
+        }
+
+        /* Interactive Hotspots directly over the email & phone text on the 3D card */
+        .card-hotspot {
+            position: absolute;
+            z-index: 5;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .card-hotspot:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 217, 125, 0.65);
+            box-shadow: 0 0 12px rgba(255, 217, 125, 0.35);
+        }
+
+        .card-hotspot.whatsapp-spot:hover {
+            background: rgba(37, 211, 102, 0.16);
+            border-color: rgba(37, 211, 102, 0.8);
+            box-shadow: 0 0 12px rgba(37, 211, 102, 0.45);
+        }
+
+        /* Dynamic Glare / Specular Highlight Overlay */
+        .glare {
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            pointer-events: none;
+            background: radial-gradient(
+                circle at 50% 50%,
+                rgba(255, 255, 255, 0.28) 0%,
+                rgba(255, 255, 255, 0.08) 30%,
+                rgba(255, 255, 255, 0) 65%
+            );
+            mix-blend-mode: screen;
+            opacity: 0.65;
+            transition: opacity 0.2s ease;
+        }
+
+        /* Contact Action Pills right below the card */
+        .contact-actions {
+            margin-top: 22px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            z-index: 10;
+            max-width: 92vw;
+        }
+
+        .contact-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 15px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            color: #ffffff;
+            background: rgba(18, 24, 42, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
+        }
+
+        .contact-pill svg {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+        }
+
+        .contact-pill.email-pill:hover {
+            background: rgba(212, 160, 36, 0.22);
+            border-color: rgba(255, 217, 125, 0.85);
+            color: #ffe299;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(212, 160, 36, 0.2);
+        }
+
+        .contact-pill.whatsapp-pill {
+            border-color: rgba(37, 211, 102, 0.35);
+        }
+
+        .contact-pill.whatsapp-pill:hover {
+            background: rgba(37, 211, 102, 0.22);
+            border-color: #25D366;
+            color: #8affb3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(37, 211, 102, 0.25);
+        }
+
+        /* Minimal Floating Controls at Bottom */
+        .controls-bar {
+            position: fixed;
+            bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(15, 18, 28, 0.72);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 8px 14px;
+            border-radius: 999px;
+            z-index: 10;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .hint-text {
+            padding: 0 8px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.55);
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.07);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(212, 160, 36, 0.6);
+        }
+
+        .btn.active {
+            background: rgba(212, 160, 36, 0.22);
+            border-color: rgba(212, 160, 36, 0.8);
+            color: #ffd97d;
+        }
+
+        /* Top-left subtle navigation switcher */
+        .top-nav {
+            position: fixed;
+            top: 20px;
+            left: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+            opacity: 0.35;
+            transition: opacity 0.25s ease;
+        }
+
+        .top-nav:hover {
+            opacity: 1;
+        }
+
+        @media (max-width: 600px) {
+            .hint-text {
+                display: none;
+            }
+            .controls-bar {
+                bottom: 14px;
+                padding: 6px 10px;
+            }
+            .contact-actions {
+                margin-top: 16px;
+                gap: 8px;
+            }
+            .contact-pill {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <!-- Top navigation for quick switching between cards -->
+    <nav class="top-nav">
+        <a href="/" class="btn" title="All Business Cards">All Cards</a>
+        {% for item in all_cards %}
+            <a href="/{{ item.slug }}" class="btn {% if item.slug == card.slug %}active{% endif %}">
+                {{ item.short_name }}
+            </a>
+        {% endfor %}
+    </nav>
+
+    <!-- Centered 3D Rotatable Business Card -->
+    <div class="scene" id="scene">
+        <div class="card-3d" id="card3d">
+            <!-- Inner layers for 3D card thickness -->
+            <div class="card-edge-layer" style="transform: translateZ(-1px);"></div>
+            <div class="card-edge-layer" style="transform: translateZ(0px);"></div>
+            <div class="card-edge-layer" style="transform: translateZ(1px);"></div>
+
+            <!-- Front Face -->
+            <div class="card-face card-front">
+                <img src="/images/{{ card.filename }}" alt="{{ card.name }} Business Card" draggable="false">
+                {% for spot in card.hotspots %}
+                <a href="{{ spot.href }}"
+                   {% if spot.type == 'whatsapp' %}target="_blank" rel="noopener noreferrer"{% endif %}
+                   class="card-hotspot {% if spot.type == 'whatsapp' %}whatsapp-spot{% endif %}"
+                   title="{{ spot.label }}"
+                   style="left: {{ spot.left }}; top: {{ spot.top }}; width: {{ spot.width }}; height: {{ spot.height }};">
+                </a>
+                {% endfor %}
+                <div class="glare" id="glareFront"></div>
+            </div>
+
+            <!-- Back Face -->
+            <div class="card-face card-back">
+                <img src="/images/{{ card.filename }}" alt="{{ card.name }} Business Card (Back)" draggable="false">
+                {% for spot in card.hotspots %}
+                <a href="{{ spot.href }}"
+                   {% if spot.type == 'whatsapp' %}target="_blank" rel="noopener noreferrer"{% endif %}
+                   class="card-hotspot {% if spot.type == 'whatsapp' %}whatsapp-spot{% endif %}"
+                   title="{{ spot.label }}"
+                   style="left: {{ spot.left }}; top: {{ spot.top }}; width: {{ spot.width }}; height: {{ spot.height }};">
+                </a>
+                {% endfor %}
+                <div class="glare" id="glareBack"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Action Links for Email & WhatsApp -->
+    <div class="contact-actions">
+        {% if card.whatsapp %}
+        <a href="https://wa.me/{{ card.whatsapp }}" target="_blank" rel="noopener noreferrer" class="contact-pill whatsapp-pill" title="Chat on WhatsApp ({{ card.phone }})">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.126.556 4.124 1.535 5.86l-1.535 5.61 5.754-1.509c1.693.896 3.619 1.409 5.666 1.409 6.627 0 12-5.373 12-12s-5.373-12-12-12z"/>
+            </svg>
+            <span>WhatsApp {{ card.phone }}</span>
+        </a>
+        {% endif %}
+
+        {% for email in card.emails %}
+        <a href="mailto:{{ email }}" class="contact-pill email-pill" title="Send email to {{ email }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+            </svg>
+            <span>{{ email }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="controls-bar">
+        <span class="hint-text">Drag to rotate &bull; Click email/phone on card or below</span>
+        <button class="btn" id="flipBtn">Flip 180&deg;</button>
+        <button class="btn" id="autoSpinBtn">Auto-Spin</button>
+        <button class="btn" id="resetBtn">Reset View</button>
+    </div>
+
+    <script>
+        const scene = document.getElementById('scene');
+        const card3d = document.getElementById('card3d');
+        const glareFront = document.getElementById('glareFront');
+        const glareBack = document.getElementById('glareBack');
+        const flipBtn = document.getElementById('flipBtn');
+        const autoSpinBtn = document.getElementById('autoSpinBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // 3D Rotation state
+        let targetRotX = 8;
+        let targetRotY = -12;
+        let currentRotX = 8;
+        let currentRotY = -12;
+
+        let isDragging = false;
+        let dragDistance = 0;
+        let autoSpin = false;
+        let lastPointerX = 0;
+        let lastPointerY = 0;
+
+        // Prevent hotspot link navigation if the user was dragging to rotate the card
+        document.querySelectorAll('.card-hotspot').forEach(link => {
+            link.addEventListener('click', (e) => {
+                if (dragDistance > 6) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        // Pointer Down: start manual 3D rotation
+        scene.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            dragDistance = 0;
+            autoSpin = false;
+            autoSpinBtn.classList.remove('active');
+            lastPointerX = e.clientX;
+            lastPointerY = e.clientY;
+        });
+
+        // Pointer Move: drag to rotate 360 degrees
+        window.addEventListener('pointermove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - lastPointerX;
+                const deltaY = e.clientY - lastPointerY;
+                dragDistance += Math.abs(deltaX) + Math.abs(deltaY);
+                targetRotY += deltaX * 0.55;
+                targetRotX -= deltaY * 0.55;
+                targetRotX = Math.max(-85, Math.min(85, targetRotX));
+                lastPointerX = e.clientX;
+                lastPointerY = e.clientY;
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            isDragging = false;
+        });
+
+        // Double click to flip 180 degrees
+        scene.addEventListener('dblclick', (e) => {
+            if (!e.target.closest('.card-hotspot')) {
+                targetRotY = Math.round(targetRotY / 180) * 180 + 180;
+            }
+        });
+
+        // Button Actions
+        flipBtn.addEventListener('click', () => {
+            targetRotY += 180;
+        });
+
+        autoSpinBtn.addEventListener('click', () => {
+            autoSpin = !autoSpin;
+            autoSpinBtn.classList.toggle('active', autoSpin);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            autoSpin = false;
+            autoSpinBtn.classList.remove('active');
+            targetRotX = 0;
+            targetRotY = 0;
+        });
+
+        // Smooth animation loop with inertia & dynamic glare calculation
+        function animate() {
+            if (autoSpin && !isDragging) {
+                targetRotY += 0.45;
+            }
+
+            // Smooth interpolation (damping)
+            currentRotX += (targetRotX - currentRotX) * 0.12;
+            currentRotY += (targetRotY - currentRotY) * 0.12;
+
+            card3d.style.transform = `rotateX(${currentRotX.toFixed(2)}deg) rotateY(${currentRotY.toFixed(2)}deg)`;
+
+            // Compute glare position based on current orientation
+            const normY = ((currentRotY % 360) + 360) % 360;
+            const glareX = 50 + Math.sin(normY * Math.PI / 180) * 40;
+            const glareY = 50 - Math.sin(currentRotX * Math.PI / 180) * 40;
+
+            const gradient = `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 32%, rgba(255, 255, 255, 0) 65%)`;
+            glareFront.style.background = gradient;
+            glareBack.style.background = gradient;
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

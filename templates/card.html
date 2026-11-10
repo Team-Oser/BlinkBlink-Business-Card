@@ -128,6 +128,68 @@
             box-shadow: 0 0 12px rgba(37, 211, 102, 0.45);
         }
 
+        /* Back of Card - Blurred Background + Centered QR Code Overlay */
+        .card-back-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: blur(8px) brightness(0.28);
+            transform: scale(1.06);
+            pointer-events: none;
+        }
+
+        .qr-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px;
+            z-index: 4;
+            text-align: center;
+        }
+
+        .qr-box {
+            background: #ffffff;
+            padding: 10px;
+            border-radius: 14px;
+            border: 2px solid #eab308;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 20px rgba(234, 179, 8, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 56%;
+            aspect-ratio: 1 / 1;
+        }
+
+        .qr-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .qr-name {
+            font-size: clamp(0.95rem, 2.2vw, 1.35rem);
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.4px;
+            margin-top: 2px;
+        }
+
+        .qr-url {
+            font-family: monospace;
+            font-size: clamp(0.68rem, 1.4vw, 0.85rem);
+            color: #ffd97d;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(234, 179, 8, 0.35);
+            padding: 4px 10px;
+            border-radius: 999px;
+        }
+
         /* Dynamic Glare / Specular Highlight Overlay */
         .glare {
             position: absolute;
@@ -320,17 +382,16 @@
                 <div class="glare" id="glareFront"></div>
             </div>
 
-            <!-- Back Face -->
+            <!-- Back Face: QR Code for this Card's Website -->
             <div class="card-face card-back">
-                <img src="/images/{{ card.filename }}" alt="{{ card.name }} Business Card (Back)" draggable="false">
-                {% for spot in card.hotspots %}
-                <a href="{{ spot.href }}"
-                   {% if spot.type == 'whatsapp' %}target="_blank" rel="noopener noreferrer"{% endif %}
-                   class="card-hotspot {% if spot.type == 'whatsapp' %}whatsapp-spot{% endif %}"
-                   title="{{ spot.label }}"
-                   style="left: {{ spot.left }}; top: {{ spot.top }}; width: {{ spot.width }}; height: {{ spot.height }};">
-                </a>
-                {% endfor %}
+                <img src="/images/{{ card.filename }}" alt="" class="card-back-bg" draggable="false">
+                <div class="qr-overlay">
+                    <div class="qr-box">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=4&data=https://blinkblink-business-card.onrender.com/{{ card.slug }}" alt="QR Code for {{ card.name }}" draggable="false">
+                    </div>
+                    <div class="qr-name">{{ card.name }}</div>
+                    <div class="qr-url">https://blinkblink-business-card.onrender.com/{{ card.slug }}</div>
+                </div>
                 <div class="glare" id="glareBack"></div>
             </div>
         </div>

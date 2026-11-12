@@ -1,4 +1,6 @@
 import os
+import sys
+import shutil
 from flask import Flask, render_template, send_from_directory, abort
 
 app = Flask(__name__)
@@ -32,6 +34,12 @@ CARDS = {
                 "label": "Email tooser.todare@gmail.com",
                 "href": "mailto:tooser.todare@gmail.com",
                 "left": "57.2%", "top": "62.8%", "width": "37.8%", "height": "6.8%"
+            },
+            {
+                "type": "website",
+                "label": "Visit Blink Blink Website",
+                "href": "https://blinkblink-q5cc.onrender.com/",
+                "left": "41.0%", "top": "84.2%", "width": "6.2%", "height": "10.3%"
             }
         ]
     },
@@ -56,6 +64,12 @@ CARDS = {
                 "label": "Email tooser.todare@gmail.com",
                 "href": "mailto:tooser.todare@gmail.com",
                 "left": "56.5%", "top": "61.5%", "width": "37.8%", "height": "6.8%"
+            },
+            {
+                "type": "website",
+                "label": "Visit Blink Blink Website",
+                "href": "https://blinkblink-q5cc.onrender.com/",
+                "left": "41.0%", "top": "84.2%", "width": "6.2%", "height": "10.3%"
             }
         ]
     },
@@ -86,6 +100,12 @@ CARDS = {
                 "label": "Email tooser.todare@gmail.com",
                 "href": "mailto:tooser.todare@gmail.com",
                 "left": "61.5%", "top": "62.0%", "width": "32.8%", "height": "6.5%"
+            },
+            {
+                "type": "website",
+                "label": "Visit Blink Blink Website",
+                "href": "https://blinkblink-q5cc.onrender.com/",
+                "left": "41.0%", "top": "84.2%", "width": "6.2%", "height": "10.3%"
             }
         ]
     },
@@ -104,6 +124,12 @@ CARDS = {
                 "label": "Email tooser.todare@gmail.com",
                 "href": "mailto:tooser.todare@gmail.com",
                 "left": "56.5%", "top": "62.5%", "width": "37.8%", "height": "6.8%"
+            },
+            {
+                "type": "website",
+                "label": "Visit Blink Blink Website",
+                "href": "https://blinkblink-q5cc.onrender.com/",
+                "left": "41.0%", "top": "84.2%", "width": "6.2%", "height": "10.3%"
             }
         ]
     }
@@ -145,7 +171,44 @@ def view_card(slug):
     return render_template("card.html", card=card, all_cards=CARDS.values())
 
 
+def build_static():
+    """Generates a static site into the 'dist' folder for Render Static Site deployment."""
+    dist_dir = os.path.join(BASE_DIR, "dist")
+    images_dir = os.path.join(dist_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
+
+    # Copy all card images into dist/images/
+    for card in CARDS.values():
+        src = os.path.join(BASE_DIR, card["filename"])
+        dst = os.path.join(images_dir, card["filename"])
+        if os.path.exists(src):
+            shutil.copy2(src, dst)
+
+    with app.test_client() as client:
+        # Render home directory page
+        res = client.get("/")
+        with open(os.path.join(dist_dir, "index.html"), "wb") as f:
+            f.write(res.data)
+
+        # Render each card route + aliases as both <slug>/index.html and <slug>.html
+        all_slugs = list(CARDS.keys()) + list(ALIASES.keys())
+        for slug in all_slugs:
+            res = client.get(f"/{slug}")
+            slug_dir = os.path.join(dist_dir, slug)
+            os.makedirs(slug_dir, exist_ok=True)
+            with open(os.path.join(slug_dir, "index.html"), "wb") as f:
+                f.write(res.data)
+            with open(os.path.join(dist_dir, f"{slug}.html"), "wb") as f:
+                f.write(res.data)
+
+    print("Static site successfully built in 'dist/'!")
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "build":
+        build_static()
+        sys.exit(0)
+
     port = int(os.environ.get("PORT", 5000))
     print("\n========================================================")
     print("  Oser 3D Business Cards Server Running!")
